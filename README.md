@@ -89,7 +89,7 @@ Caching is used to store generated reasoning for reproducibility and efficiency.
 | Model | Platform | Role |
 |------|--------|------|
 | **Gemini 2.5 Flash Lite** | Google Generative AI SDK | Primary evaluation model |
-| **Llama 4** | Ollama | Open-source comparison model |
+| **Llama 4** | Hugging Face | Open-source comparison model |
 | **Mistral Small** | Mistral API | Exploratory (abandoned due to instability) |
 
 ---
