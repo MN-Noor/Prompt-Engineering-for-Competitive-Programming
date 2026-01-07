@@ -147,10 +147,10 @@ The full experimental setup, quantitative results, and analysis are documented i
 The slides provide a concise, visual summary of the methodology and key findings.
 
 - 📘 **Final Report:**  
-  [Gen AI – Prompt Engineering for Competitive Programming (PDF)](assets/docs/Gen_AI_Final_Report.pdf)
+  [Gen AI – Prompt Engineering for Competitive Programming (PDF)](assets/Gen_AI_Final_Report.pdf)
 
 - 🖥 **Presentation Slides:**  
-  [Project Slides (PDF)](assets/docs/Gen_AI_Final_Presentation.pdf)
+  [Project Slides (PDF)](assets/Gen_AI_Final_Presentation.pdf)
 ---
 ## 🚀 Future Work
 
