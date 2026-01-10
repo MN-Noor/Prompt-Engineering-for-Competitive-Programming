@@ -1,0 +1,7 @@
+datasets==2.20.0
+transformers==4.44.2
+huggingface_hub==1.1.5
+google-generativeai
+pandas
+tqdm
+pyarrow==17.0.0
