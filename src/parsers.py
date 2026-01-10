@@ -1,47 +1,73 @@
-import os
-import json
-import re
+import random
+from src.parsers import load_example_for_prompting
 
-def parse_problem_from_files(problem_id, base_path, data_split="test"):
+MANUAL_COTS = {
+    "0002": "Let's think step by step to find the solution... (your reasoning here)",
+    "0003": "Let's think step by step to find the solution... (your reasoning here)",
+    "0004": "Let's think step by step to find the solution... (your reasoning here)"
+}
 
-    try:
-        problem_path = os.path.join(base_path, data_split, str(problem_id))
-        question_file = os.path.join(problem_path, "question.txt")
-        test_file = os.path.join(problem_path, "input_output.json")
+def format_problem_for_prompt(text):
+    return f"Problem:\n{text}\n"
 
-        if not os.path.exists(question_file) or not os.path.exists(test_file):
-            return None, None
+# --- ZERO SHOT STRATEGIES ---
 
-        with open(question_file, "r", encoding="utf-8") as f:
-            question = f.read()
+def create_zero_shot_prompt(t):
+    return (
+        format_problem_for_prompt(t) +
+        "\nFollow these instructions exactly:\n"
+        "Code:\n```python\n# ONLY runnable Python 3 code here\n```\n"
+        "\nRules:\n- No comments or text inside the code block.\n"
+        "- Follow input/output format exactly.\n"
+        "- The Python code block must be fully closed with the ``` tag.\n"
+        "\n[BEGIN REASONING]\n- Restate the problem briefly.\n"
+        "- Describe a correct and efficient algorithm.\n"
+        "- State the time complexity (e.g., O(N)).\n"
+        "- List critical edge cases.\n[END REASONING]\n"
+    )
 
-        with open(test_file, "r", encoding="utf-8") as f:
-            test_cases = json.load(f)
+def create_zero_shot_cot_prompt(t):
+    return format_problem_for_prompt(t) + "\nLet's think step by step."
 
-        return question, test_cases
-    except Exception as e:
-        print(f"Error reading problem {problem_id}: {e}")
-        return None, None
+def create_analytic_cot_prompt(t): 
+    return (
+        f"Problem:\n{t}\n\nPlease provide:\n"
+        "1. Problem analysis\n2. Algorithm design\n3. Edge cases\n\n"
+        "Then give the final Python 3 code:\n```python\n(your code here)\n```"
+    )
 
-def load_example_for_prompting(problem_id, base_path, data_split="train"):
+# --- FEW SHOT STRATEGIES ---
 
-    path = os.path.join(base_path, data_split, str(problem_id))
-    qfile = os.path.join(path, "question.txt")
-    sfile = os.path.join(path, "solutions.json")
-    try:
-        with open(qfile, "r", encoding="utf-8") as f:
-            question = f.read()
-        with open(sfile, "r", encoding="utf-8") as f:
-            sols = json.load(f)
-        if sols:
-            return question, sols[0]
-    except Exception as e:
-        print(f"Error loading example {problem_id}: {e}")
-    return None, None
+def create_few_shot_prompt(t, examples):
+    prompt = "You will be given example problems and solutions.\n\n"
+    for ex in examples:
+        prompt += f"--- EXAMPLE ---\n{ex['question']}\nSolution:\n```python\n{ex['solution_code']}\n```\n\n"
+    return prompt + "--- NEW PROBLEM ---\n" + t
 
-def extract_reasoning(text: str) -> str:
+def create_few_shot_cot_prompt(t, examples):
+    prompt = "You will be given examples with reasoning and solutions.\n\n"
+    for ex in examples:
+        prompt += f"--- EXAMPLE ---\n{ex['question']}\n{ex['reasoning']}\nSolution:\n```python\n{ex['solution_code']}\n```\n\n"
+    return prompt + "--- NEW PROBLEM ---\n" + t + "\nLet's think step by step to find the solution."
 
-    m = re.search(r"```.*?```", text, re.DOTALL)
-    if m:
-        return text[:m.start()].strip()
-    return text.strip()
+# --- AUTO & RANDOM DYNAMIC STRATEGIES ---
+
+def create_random_few_shot_cot_prompt(problem_text, data_path, k=3):
+    train_dir = os.path.join(data_path, "train")
+    all_ids = os.listdir(train_dir)
+    random_ids = random.sample(all_ids, k)
+    
+    examples = []
+    for pid in random_ids:
+        q, s = load_example_for_prompting(pid, data_path, "train")
+        if q and s:
+            reasoning = MANUAL_COTS.get(pid, "Let's think step by step to find the solution.")
+            examples.append({"question": q, "reasoning": reasoning, "solution_code": s})
+            
+    return create_few_shot_cot_prompt(problem_text, examples)
+
+def create_auto_few_shot_cot_prompt(problem_text, examples):
+    prompt = "Here are some automatically reasoned examples with their final solutions.\n\n"
+    for ex in examples:
+        prompt += f"--- EXAMPLE PROBLEM ---\n{ex['question']}\n{ex['reasoning']}\nSolution:\n```python\n{ex['solution_code']}\n```\n\n"
+    return prompt + "--- NEW PROBLEM TO SOLVE ---\n" + problem_text + "\nLet's think step by step to find the solution."
